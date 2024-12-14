@@ -4,18 +4,28 @@
 
 ### Prerequisites
 
+Run `./check_requirements.sh` to check if you have all the prerequisites installed and all the required environment variables set.
+
+#### Required Software
+
 - [Just](https://github.com/casey/just)
 - [Docker](https://www.docker.com/)
 - [Github Account](https://github.com/)
+- [AWS Account](https://aws.amazon.com/)
+- [Terraform](https://www.terraform.io/)
+- [Kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [AWS CLI](https://aws.amazon.com/cli/)
+- [Helm](https://helm.sh/)
 
-### Required Environment Variables
+#### Required Environment Variables
 
 - `GITHUB_USERNAME` - Your Github username.
 - `GITHUB_TOKEN` - A Github Personal Access Token with at least the `write:packages` scope. See [Docker and Github Container Registry](#docker-and-github-container-registry) for more information.
 
-## Entrypoint
+## Developing
 
-Run `just hello` to build and push the hello service Docker image to the Github Container Registry.
+- Run `just hello` to build and push the hello service Docker image to the Github Container Registry and deploy it to the Kubernetes cluster.
+
 
 ## Docker and Github Container Registry
 

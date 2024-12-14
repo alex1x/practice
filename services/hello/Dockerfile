@@ -1,5 +1,5 @@
 # Use the official Node.js image as a parent image
-FROM node:23.4-alpine3.20
+FROM node:23.4-slim
 
 # Set the maintainer label
 LABEL maintainer="Alex Tasioulis <tasioulis.alex@gmail.com>"

@@ -25,10 +25,22 @@ push-hello:
 clean-hello:
     docker rm -f $(docker ps -a -q --filter "ancestor=hello-service") || true
 
+# Builds, pushes, deploys the hello service docker image
 hello:
     just clean-hello
     just build-hello
     just push-hello
+    just deploy-hello
+    just test-hello
 
+# Creates a dockerconfigjson secret in the Kubernetes cluster which authenticates to the Github Container Registry
+create-dockerconfigjson:
+    kubectl create secret docker-registry dockerconfigjson-github-com --docker-server=ghcr.io --docker-username=$GITHUB_USERNAME --docker-password=$GITHUB_TOKEN
 
+# Deploys the hello service to the Kubernetes cluster
+deploy-hello:
+    kubectl apply -f kubernetes/hello.yaml
 
+# Tests the hello service by running a curl pod and curling the hello service
+test-hello:
+    kubectl run curlpod --rm -i --tty --restart=Never --image=curlimages/curl -- /bin/sh -c "curl hello-service:8400"
