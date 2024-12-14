@@ -4,7 +4,7 @@ LABEL maintainer="Alex Tasioulis <tasioulis.alex@gmail.com>"
 LABEL org.opencontainers.image.source="https://github.com/alex1x/practice"
 LABEL org.opencontainers.image.description="A simple node.js & express hello world service"
 
-WORKDIR /
+WORKDIR /usr/src/app
 
 COPY package*.json ./
 

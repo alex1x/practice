@@ -40,3 +40,12 @@ deploy-hello:
 # Tests the hello service by running a curl pod and curling the hello service
 test-hello:
     kubectl run curlpod --rm -i --tty --restart=Never --image=curlimages/curl -- /bin/sh -c "curl hello-service:8400; echo"
+
+terraform-init:
+    (cd terraform && terraform init)
+
+terraform-apply:
+    (cd terraform && terraform apply -auto-approve)
+
+terraform-destroy:
+    (cd terraform && terraform destroy -auto-approve)

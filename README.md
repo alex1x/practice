@@ -26,9 +26,10 @@ Run `./check_requirements.sh` to check if you have all the prerequisites install
 
 - I have used a private Github Container Registry repository, just to demonstrate how to do it. You can use a public repository if you prefer.
 
-## Developing
+## How to use - TLDR version
 
-- Run `just hello` to build and push the hello service Docker image to the Github Container Registry and deploy it to the Kubernetes cluster.
+- Run `just terraform-apply` to create the AWS resources.
+- Run `just docker-login` then `just hello`.
 
 ## Local Testing
 

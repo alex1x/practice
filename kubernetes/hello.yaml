@@ -34,7 +34,7 @@ kind: Service
 metadata:
   name: hello-service
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
   - port: 8400
     targetPort: 8400
