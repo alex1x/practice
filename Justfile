@@ -10,10 +10,6 @@ docker-login:
 build-hello:
     docker build -t hello-service:$(git rev-parse --short HEAD) -t hello-service:latest ./services/hello
 
-# Runs the latest docker image of the hello service
-run-hello:
-    docker run -p 8400:8400 hello-service:latest 
-
 # Pushes the hello service docker image to the Github Container Registry
 push-hello:
     docker tag hello-service:$(git rev-parse --short HEAD) ghcr.io/$GITHUB_USERNAME/hello-service:$(git rev-parse --short HEAD)
@@ -43,4 +39,4 @@ deploy-hello:
 
 # Tests the hello service by running a curl pod and curling the hello service
 test-hello:
-    kubectl run curlpod --rm -i --tty --restart=Never --image=curlimages/curl -- /bin/sh -c "curl hello-service:8400"
+    kubectl run curlpod --rm -i --tty --restart=Never --image=curlimages/curl -- /bin/sh -c "curl hello-service:8400; echo"
