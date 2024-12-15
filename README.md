@@ -8,11 +8,11 @@ In the end you will be able to see things like:
 
 How the load generator service causes the hello service to autoscale.
 
-![Load Generator and Autoscaling](https://github.com/alex1x/practice/blob/main/docs/images/load-generator-autoscaling-screenshot.png)
+![Load Generator and Autoscaling](https://github.com/alex1x/practice/blob/main/docs/images/load-generator-and-autoscaling.png)
 
 How Jaeger traces show us where errors occur:
 
-![Jaeger Traces](https://github.com/alex1x/practice/blob/main/docs/images/jaeger-traces-screenshot.png)
+![Jaeger Traces](https://github.com/alex1x/practice/blob/main/docs/images/jaeger-traces-show-credentials-error.png)
 
 ## Getting Started
 
