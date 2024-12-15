@@ -1,5 +1,19 @@
 # practice
 
+## Context
+
+This sets up a EKS cluster with a basic nodejs/express service, a load generator service, OpenTelemetry tracing with Jaeger, and Prometheus/Grafana.
+
+In the end you will be able to see things like:
+
+How the load generator service causes the hello service to autoscale.
+
+![Load Generator and Autoscaling](https://github.com/alex1x/practice/blob/main/docs/images/load-generator-autoscaling-screenshot.png)
+
+How Jaeger traces show us where errors occur:
+
+![Jaeger Traces](https://github.com/alex1x/practice/blob/main/docs/images/jaeger-traces-screenshot.png)
+
 ## Getting Started
 
 ### Prerequisites
@@ -24,12 +38,22 @@ Run `./check_requirements.sh` to check if you have all the prerequisites install
 
 ## Design Choices
 
-- I have used a private Github Container Registry repository, just to demonstrate how to do it. You can use a public repository if you prefer.
+- I used a *private* Github Container Registry repository, just to demonstrate how to do it. You can use a *public* repository if you prefer.
+- I used the official terraform module to create the EKS cluster.
+- I used EKS `Auto Mode` because it is easier to set up for a demo.
+- I injected a 20% error rate into the hello service to demonstrate that the liveness and readiness probes work.
+- I used [hey](https://github.com/rakyll/hey) to load test the hello service and demonstrate autoscaling.
+- I set up the OpenTelemetry Collector but didn't configure it fully. However you can see the service is auto-instrumented via the relevant annotation in its manifest, and the traces are being sent to the OpenTelemetry Collector. The next step would be to configure the collector to send those traces to a backend, and to configure OpenTelemetry for metrics and logs. 
 
-## How to use - TLDR version
+## How to use
 
-- Run `just terraform-apply` to create the AWS resources.
-- Run `just docker-login` then `just hello`.
+- Run `just terraform-init` then `just terraform-apply` to create the AWS resources.
+- Run `just docker-login` then `just hello` to build and push the hello service Docker image to the Github Container Registry.
+- Run `just create-dockerconfigjson` to create a `dockerconfigjson` secret in the Kubernetes cluster which authenticates to the Github Container Registry.
+- Run `just deploy-hello` to deploy the hello service to the Kubernetes cluster.
+- Run `just loadgenerator` to build and push the loadgenerator Docker image to the Github Container Registry.
+- Run `just deploy-loadgenerator` to deploy the loadgenerator to the Kubernetes cluster, which will load test the hello service.
+- Run `just test-hello` to test the hello service by running a curl pod and curling the hello service.
 
 ## Local Testing
 
