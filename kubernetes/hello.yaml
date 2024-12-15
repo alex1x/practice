@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
         app: hello-service
+      annotations:
+        instrumentation.opentelemetry.io/inject-nodejs: "true"
     spec:
       containers:
       - name: hello-container
@@ -26,6 +28,21 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8400
+          initialDelaySeconds: 1
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8400
+          initialDelaySeconds: 1
+          periodSeconds: 10
+        env:
+          - name: OTEL_LOG_LEVEL
+            value: "debug"
       imagePullSecrets:
         - name: dockerconfigjson-github-com
 ---
@@ -40,3 +57,22 @@ spec:
     targetPort: 8400
   selector:
     app: hello-service
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hello-service-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hello-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
