@@ -17,7 +17,6 @@ do-everything:
     @just install-ingress
     @just loadgenerator
     @just output-urls
-    @just output-grafana-password
 
 cleanup:
     @just terraform-destroy
@@ -33,7 +32,7 @@ update-github-username:
     find . -type f -exec sed -i "s/alex1x/$GITHUB_USERNAME/g" {} +
 
 update-grafana-password:
-    if grep -q "GRAFANA_PASSWORD" .env; then sed -i "s/^GRAFANA_PASSWORD=.*/GRAFANA_PASSWORD=$(openssl rand -base64 32)/" .env; else echo "GRAFANA_PASSWORD=$(openssl rand -base64 32)" >> .env; fi
+    if grep -q "^GRAFANA_PASSWORD=" .env; then sed -i "/^GRAFANA_PASSWORD=/c\GRAFANA_PASSWORD='$(tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c 32)'" .env; else echo "GRAFANA_PASSWORD='$(tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c 32)'" >> .env; fi
 
 output-grafana-password:
     @echo "\033[1;34mGrafana Password:\033[0m ${GRAFANA_PASSWORD}"
@@ -93,12 +92,15 @@ create-dockerconfigjson:
 
 # Deploys the hello service to the Kubernetes cluster
 deploy-hello:
-    kubectl apply -f kubernetes/hello.yaml
+    kubectl apply -f kubernetes/workloads/hello.yaml
 
 # Deploys the loadgenerator to the Kubernetes cluster, which will load test the hello service
 deploy-loadgenerator:
+    @kubectl delete pod loadgenerator --force || true
     echo "Running loadgenerator, this will take a few minutes..."
-    kubectl run loadgenerator --rm -i --tty --restart=Never --image=ghcr.io/alex1x/loadgenerator --overrides='{"spec": {"imagePullSecrets": [{"name": "dockerconfigjson-github-com"}]}}' -- -z 5m -c 50 http://hello-service:8400
+    echo "\033[1;32mIgnore the note about if you don't see a command prompt. You won't see one 😊\033[0m"
+    echo "Instead, you will see the loadgenerator output in the terminal after 5 minutes 😊"
+    kubectl apply -f kubernetes/workloads/loadgenerator.yaml
 
 # Tests the hello service by running a curl pod and curling the hello service
 test-hello:
@@ -111,47 +113,67 @@ install-otel-operator:
     kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v0.115.0/opentelemetry-operator.yaml
 
 install-prometheus-stack:
-    helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack --set grafana.adminPassword=$GRAFANA_PASSWORD || true
+    export $(grep -v '^#' .env | xargs -d '\n') && helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack --set grafana.adminPassword=$GRAFANA_PASSWORD || true
 
 install-metrics-server:
-    kubectl apply -f kubernetes/metrics-server.yaml
+    kubectl apply -f kubernetes/utils/metrics-server.yaml
 
 install-otelcol:
-    kubectl apply -f kubernetes/otelcol.yaml
+    kubectl apply -f kubernetes/utils/otelcol.yaml
 
 install-jaeger:
-    helm install jaeger jaegertracing/jaeger --values kubernetes/helm/jaeger.yaml
+    helm upgrade --install jaeger jaegertracing/jaeger --values kubernetes/helm/jaeger.yaml
 
 install-ingress:
-    kubectl apply -f kubernetes/ingress.yaml
+    kubectl apply -f kubernetes/utils/ingress.yaml
 
 install-ingress-nginx:
     helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --set controller.service.type=LoadBalancer --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"="nlb" --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"="internet-facing" --set controller.allowSnippetAnnotations=true
 
 install-all-kubernetes-utils:
     @just install-cert-manager
+    @just wait-for-cert-manager
     @just install-metrics-server
-    @sleep 10
     @just install-otel-operator
     @just update-grafana-password
     @just install-prometheus-stack
     @just install-otelcol
     @just install-jaeger
     @just install-ingress-nginx
+    @just wait-for-ingress
+    @echo "Waiting for the ingress to be ready..."
+    @sleep 60 # I don't trust the above recipe
 
+wait-for-cert-manager:
+    @echo "Waiting for cert-manager to be ready..."
+    @until kubectl get pods -l app.kubernetes.io/name=cert-manager -o jsonpath='{.items[0].status.phase}' -n cert-manager | grep -qE 'Running'; do echo "Waiting..."; sleep 10; done
+    @until kubectl get pods -l app.kubernetes.io/name=cainjector -o jsonpath='{.items[0].status.phase}' -n cert-manager | grep -qE 'Running'; do echo "Waiting..."; sleep 10; done
+    @until kubectl get pods -l app.kubernetes.io/name=webhook -o jsonpath='{.items[0].status.phase}' -n cert-manager | grep -qE 'Running'; do echo "Waiting..."; sleep 10; done
+    @echo "Cert-manager is ready."
 
+wait-for-ingress:
+    @echo "Waiting for ingress-nginx-controller to have an external IP..."
+    @until [ -n "$(kubectl get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')" ]; do echo "Waiting..."; sleep 10; done
+    @echo "Ingress-nginx-controller has an external IP."
+
+add-lb-url-to-env:
+    if grep -q "LB_URL=" .env; then sed -i'' -e "s|LB_URL=.*|LB_URL=$(kubectl get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')|" .env; else echo LB_URL=$(kubectl get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}') >> .env; fi
 
 output-urls:
-    if grep -q "LB_URL=" .env; then sed -i'' -e "s|LB_URL=.*|LB_URL=$(kubectl get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')|" .env; else echo LB_URL=$(kubectl get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}') >> .env; fi
+    @just add-lb-url-to-env
+    export $(grep -v '^#' .env | xargs -d '\n') && just output-urls-from-env 
+    @just output-grafana-password
+
+output-urls-from-env:
     @echo "\033[1;34mIngress Load Balancer URL:\033[0m ${LB_URL}"
     @echo "\033[1;34mHello Service URL:\033[0m http://${LB_URL}/hello"
     @echo "\033[1;34mGrafana URL:\033[0m http://${LB_URL}/grafana"
-    @echo "\033[1;34mJaeger URL:\033[0m http://${LB_URL}/jaeger - unfortunately this won't work out of the box 😞"
+    @echo "\033[1;34mJaeger URL:\033[0m http://${LB_URL}/jaeger - unfortunately this won't work out of the box 😞 instead use this: k port-forward svc/jaeger-query 16686:16686 and go to localhost:16686 on your browser"
     @echo "----------------------------------------"
     @echo ""
 
 rbac-test:
-    kubectl apply -f kubernetes/rbac-test.yaml
+    kubectl apply -f kubernetes/workloads/rbac-test.yaml
 
 configure-kubectl:
     aws eks update-kubeconfig --name $(cd terraform && terraform output -raw cluster_name)

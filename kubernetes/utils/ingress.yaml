@@ -10,8 +10,8 @@ spec:
   - host: 
     http: 
       paths:
-      - path: /grafana
-        pathType: Prefix
+      - path: /
+        pathType: ImplementationSpecific
         backend:
           service:
             name: prometheus-stack-grafana

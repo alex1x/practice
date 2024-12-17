@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadgenerator
+spec:
+  template:
+    metadata:
+      name: loadgenerator
+    spec:
+      containers:
+      - name: loadgenerator
+        image: ghcr.io/alex1x/loadgenerator
+        args: ["-z", "5m", "-c", "20", "http://hello-service:8400"]
+        env:
+          - name: OTEL_LOG_LEVEL
+            value: "debug"
+      imagePullSecrets:
+      - name: dockerconfigjson-github-com
+      restartPolicy: Never
