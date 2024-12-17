@@ -97,7 +97,10 @@ Take stock of what we've achieved so far:
 - I used [hey](https://github.com/rakyll/hey) to load test the hello service and demonstrate autoscaling.
 - I set up the OpenTelemetry Collector but didn't configure it fully. However you can see the service is auto-instrumented via the relevant annotation in its manifest, and the traces are being sent to the OpenTelemetry Collector. The next step would be to configure the collector to send those traces to a backend, and to configure OpenTelemetry for metrics and logs. 
 - One of the requirements was to configure RBAC "to limit permissions to only what is necessary for the pod and service". The hello world deployment does not need any permissions, so *doing nothing* was a valid solution. However, I created a simple RBAC test in the `kubernetes/rbac-test.yaml` file to demonstrate how to use RBAC if it were needed.
-- I did not set up TLS termination at the ingress as part of the happy path because that requires a domain name, which would have been difficult for you to replicate. Instead I set up TLS termination "separately" so I can demonstrate it. 
+- I did not set up TLS termination at the ingress as part of the happy path because that requires a domain name, which would have been difficult for you to replicate.
+- I put almost everything in the `default` namespace, for convenience.
+- Because `jaeger` runs in memory, it eventually restarts once too many traces are created. This is because the memory limit is reached. 
+
 
 ## Challenges
 

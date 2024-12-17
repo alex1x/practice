@@ -21,3 +21,5 @@ just
 After using `just` on this project for a few days... I like it.
 
 It feels more intuitive than Makefile.
+
+However I did not like the way the dotenv file was loaded. I had to use `export $(grep -v '^#' .env | xargs -d '\n')` to load the variables into the shell for it to pick up variables created within the same execution of the `just` command.
