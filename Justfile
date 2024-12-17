@@ -6,6 +6,8 @@ default:
     just --list --unsorted
 
 do-everything:
+    @just check-github-username
+    @just check-github-token
     @just terraform-init
     @just terraform-apply
     @just docker-login
@@ -32,10 +34,10 @@ update-github-username:
     find . -type f -exec sed -i "s/alex1x/$GITHUB_USERNAME/g" {} +
 
 update-grafana-password:
-    if grep -q "^GRAFANA_PASSWORD=" .env; then sed -i "/^GRAFANA_PASSWORD=/c\GRAFANA_PASSWORD='$(tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c 32)'" .env; else echo "GRAFANA_PASSWORD='$(tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c 32)'" >> .env; fi
+    if grep -q "^GRAFANA_PASSWORD=" .env; then sed -i "/^GRAFANA_PASSWORD=/c\GRAFANA_PASSWORD=$(tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c 32)" .env; else echo "GRAFANA_PASSWORD=$(tr -dc 'A-Za-z0-9!@#$%^&*' < /dev/urandom | head -c 32)" >> .env; fi
 
 output-grafana-password:
-    @echo "\033[1;34mGrafana Password:\033[0m ${GRAFANA_PASSWORD}"
+    @echo "\033[1;34mGrafana Password:\033[0m $(cat .env | grep GRAFANA_PASSWORD | cut -d '=' -f2)"
 
 # Logs into the Docker registry using the GITHUB_TOKEN environment variable
 docker-login:
@@ -96,11 +98,8 @@ deploy-hello:
 
 # Deploys the loadgenerator to the Kubernetes cluster, which will load test the hello service
 deploy-loadgenerator:
-    @kubectl delete pod loadgenerator --force || true
-    echo "Running loadgenerator, this will take a few minutes..."
-    echo "\033[1;32mIgnore the note about if you don't see a command prompt. You won't see one 😊\033[0m"
-    echo "Instead, you will see the loadgenerator output in the terminal after 5 minutes 😊"
-    kubectl apply -f kubernetes/workloads/loadgenerator.yaml
+    @kubectl delete -f kubernetes/workloads/loadgenerator.yaml --force || true
+    @kubectl apply -f kubernetes/workloads/loadgenerator.yaml
 
 # Tests the hello service by running a curl pod and curling the hello service
 test-hello:
@@ -113,7 +112,7 @@ install-otel-operator:
     kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v0.115.0/opentelemetry-operator.yaml
 
 install-prometheus-stack:
-    export $(grep -v '^#' .env | xargs -d '\n') && helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack --set grafana.adminPassword=$GRAFANA_PASSWORD || true
+    export $(grep -v '^#' .env | xargs -d '\n') && helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack --set grafana.adminPassword="$(echo $GRAFANA_PASSWORD)" || true
 
 install-metrics-server:
     kubectl apply -f kubernetes/utils/metrics-server.yaml
