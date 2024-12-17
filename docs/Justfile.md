@@ -16,4 +16,8 @@ To list all the recipes, use the `just` command without any arguments.
 just
 ```
 
+## Verdict
 
+After using `just` on this project for a few days... I like it.
+
+It feels more intuitive than Makefile.

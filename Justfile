@@ -1,6 +1,25 @@
+# required to load env vars from .env
+set dotenv-load
+
 # This is the default recipe that lists all the recipes
 default:
     just --list --unsorted
+
+do-everything:
+    @just terraform-init
+    @just terraform-apply
+    @just docker-login
+    @just configure-kubectl
+    @just create-dockerconfigjson
+    @just install-all-kubernetes-utils
+    @just hello
+    @just rbac-test
+    @just install-ingress
+    @just loadgenerator
+    @just output-urls
+
+cleanup:
+    @just terraform-destroy
 
 check-github-username:
     @if [ -z "$GITHUB_USERNAME" ]; then echo "GITHUB_USERNAME is not set"; exit 1; else echo "GITHUB_USERNAME is set to $GITHUB_USERNAME"; fi
@@ -11,6 +30,9 @@ check-github-token:
 update-github-username:
     @just check-github-username
     find . -type f -exec sed -i "s/alex1x/$GITHUB_USERNAME/g" {} +
+
+update-grafana-password:
+    if grep -q "GRAFANA_PASSWORD" .env; then sed -i "s/^GRAFANA_PASSWORD=.*/GRAFANA_PASSWORD=$(openssl rand -base64 32)/" .env; else echo "GRAFANA_PASSWORD=$(openssl rand -base64 32)" >> .env; fi
 
 # Logs into the Docker registry using the GITHUB_TOKEN environment variable
 docker-login:
@@ -40,7 +62,6 @@ hello:
     @just build-hello
     @just push-hello
     @just deploy-hello
-    @just test-hello
 
 clean-loadgenerator:
     kubectl delete deployment loadgenerator --force || true
@@ -64,7 +85,7 @@ loadgenerator:
 create-dockerconfigjson:
     @just check-github-username
     @just check-github-token
-    kubectl create secret docker-registry dockerconfigjson-github-com --docker-server=ghcr.io --docker-username=$GITHUB_USERNAME --docker-password=$GITHUB_TOKEN
+    kubectl create secret docker-registry dockerconfigjson-github-com --docker-server=ghcr.io --docker-username=$GITHUB_USERNAME --docker-password=$GITHUB_TOKEN --dry-run=client -o yaml | kubectl apply -f -
 
 # Deploys the hello service to the Kubernetes cluster
 deploy-hello:
@@ -86,7 +107,48 @@ install-otel-operator:
     kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/download/v0.115.0/opentelemetry-operator.yaml
 
 install-prometheus-stack:
-    helm install prometheus-stack prometheus-community/kube-prometheus-stack
+    helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack --set grafana.adminPassword=$GRAFANA_PASSWORD || true
+
+install-metrics-server:
+    kubectl apply -f kubernetes/metrics-server.yaml
+
+install-otelcol:
+    kubectl apply -f kubernetes/otelcol.yaml
+
+install-jaeger:
+    helm install jaeger jaegertracing/jaeger --values kubernetes/helm/jaeger.yaml
+
+install-ingress:
+    kubectl apply -f kubernetes/ingress.yaml
+
+install-ingress-nginx:
+    helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --set controller.service.type=LoadBalancer --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"="nlb" --set controller.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"="internet-facing" --set controller.allowSnippetAnnotations=true
+
+install-all-kubernetes-utils:
+    @just install-cert-manager
+    @just install-metrics-server
+    @sleep 10
+    @just install-otel-operator
+    @just update-grafana-password
+    @just install-prometheus-stack
+    @just install-otelcol
+    @just install-jaeger
+    @just install-ingress-nginx
+
+
+
+output-urls:
+    if grep -q "LB_URL=" .env; then sed -i'' -e "s|LB_URL=.*|LB_URL=$(kubectl get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')|" .env; else echo LB_URL=$(kubectl get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}') >> .env; fi
+    @echo "\033[1;34mIngress Load Balancer URL:\033[0m ${LB_URL}"
+    @echo "\033[1;34mHello Service URL:\033[0m http://${LB_URL}/hello"
+    @echo "\033[1;34mGrafana URL:\033[0m http://${LB_URL}/grafana"
+    @echo "\033[1;34mJaeger URL:\033[0m http://${LB_URL}/jaeger"
+
+rbac-test:
+    kubectl apply -f kubernetes/rbac-test.yaml
+
+configure-kubectl:
+    aws eks update-kubeconfig --name $(cd terraform && terraform output -raw cluster_name)
 
 terraform-init:
     (cd terraform && terraform init)

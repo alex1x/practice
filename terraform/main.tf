@@ -22,11 +22,15 @@ data "aws_subnets" "default" {
   }
 }
 
+locals {
+  cluster_name = "practice"
+}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.31"
 
-  cluster_name    = "practice"
+  cluster_name    = local.cluster_name
   cluster_version = "1.31"
 
   # Optional
@@ -59,4 +63,14 @@ resource "aws_dynamodb_table" "practice" {
     type = "S"
   }
   billing_mode = "PAY_PER_REQUEST"
+}
+
+resource "null_resource" "tag_subnets" {
+  for_each = toset(data.aws_subnets.default.ids)
+
+  provisioner "local-exec" {
+    command = <<EOT
+      aws ec2 create-tags --resources ${each.key} --tags Key=kubernetes.io/role/elb,Value=1 Key=kubernetes.io/cluster/${local.cluster_name},Value=shared
+    EOT
+  }
 }

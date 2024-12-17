@@ -57,3 +57,8 @@ output "cluster_ip_family" {
   description = "The IP family used by the cluster (e.g. `ipv4` or `ipv6`)"
   value       = module.eks.cluster_ip_family
 }
+
+output "subnet_ids" {
+  description = "The IDs of the defaultsubnets"
+  value       = data.aws_subnets.default.ids
+}
