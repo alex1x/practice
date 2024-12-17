@@ -44,7 +44,7 @@ Once `./check_requirements.sh` is run and all the environment variables are set,
 
 This will ~~do everything~~ create the AWS resources, build and push the hello service Docker image to the Github Container Registry, deploy the hello service to the Kubernetes cluster, and run the loadgenerator to load test the hello service.
 
-Once everything is deployed (will take about 10 minutes), you will get a URL to Grafana and Jaeger. You can login to Grafana (credentials: `admin:prom-operator`) to look at metrics or Jaeger to look at traces. 
+Once everything is deployed (will take about 10 minutes), you will get a URL to Grafana and Jaeger. You can login to Grafana (username: `admin`, password: the script will output it on your console) to look at metrics or Jaeger to look at traces. 
 
 In addition, you can run:
 - `just test-hello` to test the hello service by running a curl pod and curling it

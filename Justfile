@@ -17,6 +17,7 @@ do-everything:
     @just install-ingress
     @just loadgenerator
     @just output-urls
+    @just output-grafana-password
 
 cleanup:
     @just terraform-destroy
@@ -33,6 +34,9 @@ update-github-username:
 
 update-grafana-password:
     if grep -q "GRAFANA_PASSWORD" .env; then sed -i "s/^GRAFANA_PASSWORD=.*/GRAFANA_PASSWORD=$(openssl rand -base64 32)/" .env; else echo "GRAFANA_PASSWORD=$(openssl rand -base64 32)" >> .env; fi
+
+output-grafana-password:
+    @echo "\033[1;34mGrafana Password:\033[0m ${GRAFANA_PASSWORD}"
 
 # Logs into the Docker registry using the GITHUB_TOKEN environment variable
 docker-login:
@@ -142,7 +146,9 @@ output-urls:
     @echo "\033[1;34mIngress Load Balancer URL:\033[0m ${LB_URL}"
     @echo "\033[1;34mHello Service URL:\033[0m http://${LB_URL}/hello"
     @echo "\033[1;34mGrafana URL:\033[0m http://${LB_URL}/grafana"
-    @echo "\033[1;34mJaeger URL:\033[0m http://${LB_URL}/jaeger"
+    @echo "\033[1;34mJaeger URL:\033[0m http://${LB_URL}/jaeger - unfortunately this won't work out of the box 😞"
+    @echo "----------------------------------------"
+    @echo ""
 
 rbac-test:
     kubectl apply -f kubernetes/rbac-test.yaml
