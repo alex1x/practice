@@ -101,16 +101,14 @@ Take stock of what we've achieved so far:
 
 ## Challenges
 
-1. I could not get the path based ingress to work correctly. This is because when you go to `/grafana` it redirects you to `/login`. When you go to `/jaeger` it also tries to redirect you to `/login`. Because ot this conflict I could not get both of them to work at the same time. 
-2. I found the cert-manager docs unclear. For example the docs explaining how to create a certificate for nginx ingress mention that you need to use a certain email address and a secret but they don't explain where to register your email address or what the secret should look like.
+Mostly with ingress and cert-manager.
 
-
-Options I looked at were:
-1. Add an env var to grafana to set the root path to `/grafana`
-2. Edit `grafana.ini` to set the root path to `/grafana`
-3. Use NGINX rewrite rules to redirect to the correct path
-
-None of these worked for me so I gave up. None of these would be a problem if we had a domain name. 
+1. I could not get the path based ingress to work correctly. This is because when you go to `/grafana` it redirects you to `/login`. When you go to `/jaeger` it also tries to redirect you to `/login`. Because of this conflict I could not get both of them to work at the same time (however all this is avoided if you used host based routing instead of path based routing). Options I looked at (none of them worked for me):
+    1. Add an env var to grafana to set the root path to `/grafana`
+    2. Edit `grafana.ini` to set the root path to `/grafana`
+    3. Use NGINX rewrite rules to redirect to the correct path
+2. I found the cert-manager docs unclear. For example the docs explaining how to create a certificate for nginx ingress mention that you need to use a certain email address and a secret but don't give much context about what either of those are for.
+3. Getting a wild card certificate issued did not work by default. I had to use a DNS "solver" with my Cloudflare email and API token to get the certificate issued.
 
 ## Troubleshooting
 
